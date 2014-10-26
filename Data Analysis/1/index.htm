@@ -1,0 +1,161 @@
+<!--Reference: //http://www.frankcleary.com/making-an-interactive-line-graph-with-d3-js/-->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+  <body>
+    <title>Average Temperature anomaly of Mississippi in August (2005 - 2014)</title>
+    <style>
+      .d3-tip {
+      line-height: 1;
+      font-weight: bold;
+      padding: 5px;
+	  font-size:9px;
+      background: rgba(0, 0, 0, 0.8);
+	  line-height: 1.08;
+      color: #fff;
+      border-radius: 5px;
+	  font-family: "Times New Roman";
+      }
+	  path {
+	  stroke: steelblue;
+	  stroke-width: 2;
+	  fill: none;
+	  }
+      .axis path, .axis line {
+      fill: none;
+      stroke: #939393;
+	  stroke-width: 3
+      shape-rendering: crispEdges;
+      }
+	  .datapoint:hover{
+	  fill: steelblue;
+	  }
+	  .xlabel, .ylabel {
+	  font-weight:normal;
+	  font-size:17px;
+	  font-family: "Times New Roman";	
+	  }
+    </style>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    <script>
+
+function parser(d) {
+
+    d.pValue = +d.Value;
+    d.pAnomaly = +d.Anomaly;
+	d.pPercentage = +d.Percentage;
+	d.pAverage = +d.Average;
+    d.pDate = new Date(d.Date.substring(0,4),String(parseInt(d.Date.substring(4,6)-1)));
+	return d;
+}
+
+var format = d3.time.format("%Y/%m");
+
+function tempovertime(csvdata) {
+    var margin = {top: 30, right: 30, bottom: 75, left: 100};
+    var width =  633- margin.left - margin.right;
+    var height = 500 - margin.top - margin.bottom;
+	var x = d3.scale.ordinal()
+	  .rangeRoundBands([0, width], .05);
+	
+	var y = d3.scale.linear()
+	  .domain([5, -5])
+	  .range([0, height]);
+	
+	
+    var xAxis = d3.svg.axis()
+		.scale(x)
+		.orient("bottom")
+		.tickFormat(format).outerTickSize(0);;
+		
+	var yAxis = d3.svg.axis()
+	  .scale(y)
+	  .ticks(10)
+	  .orient("left");
+
+    var svg = d3.select("#temp").append("svg")
+	  .attr("width", width + margin.left + margin.right)
+	  .attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+	  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    
+    //Mouseover tip
+    var tip = d3.tip()
+	.attr('class', 'd3-tip')
+	.offset([60, 120])
+	.html(function(d) {
+	    return 	"Anomaly                                  : "+d.pAnomaly + "\u00B0F" + "<br>" +
+				"Average Temperature, August               ("+(d.pDate.getFullYear())+") : "+d.pValue + "\u00B0F<br>" +
+				"Average Temperature, August (1901-2000 Base period) : "+d.pAverage + "\u00B0F" + "<br>" +
+				"Percentage Anomaly                       : "+d.pPercentage.toFixed(2) + "%" + "<br>";
+	});
+
+    svg.call(tip);
+
+	x.domain(csvdata.map(function(d) { return d.pDate; }));
+    // add the x axis and x-label
+    svg.append("g")
+	  .attr("class", "x axis")
+	  .attr("transform", "translate(0," + height/2 + ")")
+	  .call(xAxis)
+	  .selectAll("text")
+	  .attr("y", 150)
+	  .attr("x", 150)
+	  .attr("dy", ".35em")
+	  .attr("font-size","14px")
+	  .attr("transform", "rotate(45)")
+	  .style("text-anchor", "start");
+	  
+    svg.append("text")
+	  .attr("class", "xlabel")
+	  .attr("text-anchor", "middle")
+	  .attr("x", width / 2)
+	  .attr("y", height + margin.bottom/2+30)
+	  .text("Year");
+
+    // add the y axis and y-label
+    svg.append("g")
+	  .attr("class", "y axis")
+	  .attr("font-size","14px")
+	  .attr("transform", "translate(0,0)")
+	  .call(yAxis)
+	  
+    svg.append("text")
+	  .attr("class", "ylabel")
+	  .attr("y",  0 - margin.left/2-10) // x and y switched due to rotation!!
+	  .attr("x", 0 - (height/2))
+	  .attr("dy", "1em")
+	  .attr("transform", "rotate(-90)")
+	  .style("text-anchor", "middle")
+	  .text("Temperature Anomaly (\u00B0F)");
+
+    svg.append("text")
+	  .attr("class", "graphtitle")
+	  .attr("y", -15)
+	  .attr("x", width/2+15)
+	  .attr("font-size","18px")
+	  .style("text-anchor", "middle")
+	  .text("Average Temperature Anomaly of Mississippi in August (2005 - 2014)");
+
+	svg.selectAll("bar")
+	   .data(csvdata)
+	   .enter()
+	   .append("rect")
+	   .style("fill", "steelblue")
+	   .attr("x", function(d) { return (x(d.pDate) +(x.rangeBand() *.25)/2 ); })
+	   .attr("width", x.rangeBand() *.75)
+	   .attr("y", function(d) { return y(Math.max(0,d.pAnomaly)); })
+	   .attr("height", function(d) {  return Math.abs(y(d.pAnomaly) - y(0));})
+	   .on('mouseover', tip.show)
+	   .on('mouseout', tip.hide);
+}
+// Read in .csv data and make graph
+d3.csv("temp.csv", parser,
+       function(error, csvdata) {
+	   tempovertime(csvdata);
+}); 
+	</script>
+    <div id="temp" class="graph"></div>
+  </body>
+</html>
